@@ -270,8 +270,9 @@ pub async fn prover(
     log_phase(ProverPhases::ReceivedResponse);
     if response.status() != StatusCode::OK {
         return Err(JsValue::from_str(&format!(
-            "Response status is not OK: {:?}",
-            response.status()
+            "Response status is not OK! {:?} \n {:?}",
+            response.status(),
+            response.into_body().collect().await.unwrap().to_bytes()
         )));
     }
 
