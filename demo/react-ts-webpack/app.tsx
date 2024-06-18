@@ -34,14 +34,18 @@ function App(): ReactElement {
   //   includeArchived: false,
   // });
 
-  https: const domain = 'huggingface.co';
-  const path =
-    '/api/recent-activity?limit=30&feedType=user&activityType=all&skip=0&savePreferences=true';
+  https: const domain = 'kaggle.com';
+  const path = '/api/i/users.UsersService/GetCurrentUser';
   const cookieStr =
-    '__stripe_mid=281fb493-1907-4048-87b2-b87f559121d7cb77fb; token=OTbzbLBnKbovkeSjIPWGYCFWzNRvoWEAUZSXmEAoKDCtAPRZfBZfDEvVDtXTFOAWJqvDKCKreVFpOhFFuDwtbZnRtPLHvMoFyjOATXPLVgfxMLxcVBEztKbuorBMXTNp; token=OTbzbLBnKbovkeSjIPWGYCFWzNRvoWEAUZSXmEAoKDCtAPRZfBZfDEvVDtXTFOAWJqvDKCKreVFpOhFFuDwtbZnRtPLHvMoFyjOATXPLVgfxMLxcVBEztKbuorBMXTNp; __stripe_sid=e84faefc-df3f-4cbe-9150-ca80e63e731d108d1c; aws-waf-token=c809c0ad-879e-4ee4-8875-01a51b466e60:EQoAn54wlKkfAAAA:1xxBYqXx/ihNRPBijOdlT0iVeTZB3SQ3cb1+eNx7zP2x9pZFCg37/Z59KORTxCXVK4FwMLRQJ8rVqsNlnbtFoUeETDV/ZN9YC33JKAKNQ2eZiYcNru50FXa8gt40sJpjgYwE6fJf08OJE1kWXjmtoSHF9HsE2MlpecETM/ACrv1REd6oI3/HbqF34xr2nc9EdNBrPu2kYE4SZJOiM29t2Bj31I6ZhMK+xCD7UYYTcIMdwwe6BBls3+Vb2vd1qKcLiY1u+e+GjPUw3buikw==';
-  const method = 'GET';
+    'ka_sessionid=42ae7fceb9925bb23a9ed1f6ca2c089e; CSRF-TOKEN=CfDJ8CHCUm6ypKVLpjizcZHPE710behvzMLQjeaPS210sFcV5GsgnFWv2uedN-v6DctSgdxvqyUIk-kK4akpXsCjwyzrveX9H_oCfo6yTUM3pQ; GCLB=CMjvivq9vPqbHBAD; build-hash=7b4be2769bcc2693c6a4dcae319cecda677dc19b; __Host-KAGGLEID=CfDJ8CHCUm6ypKVLpjizcZHPE71JU5t_noYzelPN7B5x3NkKohE0tqhnEJotKqOK9UCfr3Ea4rwXQRIf759bdh1hbgE2auX2x986rg_1jTfMGN3LKZZTP8_h1LC9; pdfcc=5; recaptcha-ca-t=AaGzOmegnidLS4PRKmtWZH2_kPbte5nzRWXl_Zr6oa9MW9eoTYS3SnrT8ACBay27OgYHhWRBkQTogSnaFlMPskyRBoAm7E1nTk26vwXXG-jJ0OlH1eECDGTi2JtFT2nGHPXXXv8IG5q1C2bTcw:U=408777e2a0000000; XSRF-TOKEN=CfDJ8CHCUm6ypKVLpjizcZHPE712YgsbiQ4imqcQViJXIygKh986FeB0dk7_ep4OmeLvn5rm40mSzMXEvnKA0PQ1x9HmEda5e-r8hp0QD76QfFCIJrotbOslQSZNBLwBlxhF9_WZgSrWPFxywc7CVl9V0R4; CLIENT-TOKEN=eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJrYWdnbGUiLCJhdWQiOiJjbGllbnQiLCJzdWIiOiJ6bGltOTMyMDAiLCJuYnQiOiIyMDI0LTA2LTEzVDIxOjA4OjA1LjA5NjA4MjZaIiwiaWF0IjoiMjAyNC0wNi0xM1QyMTowODowNS4wOTYwODI2WiIsImp0aSI6ImQ3OGY0ZWViLWFmMDQtNDJmOS1hMDQzLTJjM2I3MzU1NzE4OSIsImV4cCI6IjIwMjQtMDctMTNUMjE6MDg6MDUuMDk2MDgyNloiLCJ1aWQiOjIxMTQyODg1LCJkaXNwbGF5TmFtZSI6IlpsaW05MzIwMCIsImVtYWlsIjoiYmF0Y2h0cmFpbkBnbWFpbC5jb20iLCJ0aWVyIjoiTm92aWNlIiwidmVyaWZpZWQiOmZhbHNlLCJwcm9maWxlVXJsIjoiL3psaW05MzIwMCIsInRodW1ibmFpbFVybCI6Imh0dHBzOi8vc3RvcmFnZS5nb29nbGVhcGlzLmNvbS9rYWdnbGUtYXZhdGFycy90aHVtYm5haWxzL2RlZmF1bHQtdGh1bWIucG5nIiwiZmYiOlsiS2VybmVsc0RyYWZ0VXBsb2FkQmxvYiIsIktlcm5lbHNGaXJlYmFzZUxvbmdQb2xsaW5nIiwiQWxsb3dGb3J1bUF0dGFjaG1lbnRzIiwiS2VybmVsc1NhdmVDZWxsT3V0cHV0IiwiRnJvbnRlbmRFcnJvclJlcG9ydGluZyIsIlJlZ2lzdHJhdGlvbk5ld3NFbWFpbFNpZ251cElzT3B0T3V0IiwiRGlzY3Vzc2lvbnNSZWFjdGlvbnMiLCJEYXRhc2V0VXBsb2FkZXJEdXBsaWNhdGVEZXRlY3Rpb24iLCJEYXRhc2V0c0xsbUZlZWRiYWNrQ2hpcCIsIk1ldGFzdG9yZUNoZWNrQWdncmVnYXRlRmlsZUhhc2hlcyIsIktNTWF0ZXJpYWxVSURpYWxvZyIsIkFsbFJvdXRlc1RvUmVhY3RSb3V0ZXIiXSwiZmZkIjp7Iktlcm5lbEVkaXRvckF1dG9zYXZlVGhyb3R0bGVNcyI6IjMwMDAwIiwiRW1lcmdlbmN5QWxlcnRCYW5uZXIiOiJ7fSIsIkNsaWVudFJwY1JhdGVMaW1pdFFwcyI6IjQwIiwiQ2xpZW50UnBjUmF0ZUxpbWl0UXBtIjoiNTAwIiwiRmVhdHVyZWRDb21tdW5pdHlDb21wZXRpdGlvbnMiOiI2MDA5NSw1NDAwMCw1NzE2Myw4MDg3NCIsIkFkZEZlYXR1cmVGbGFnc1RvUGFnZUxvYWRUYWciOiJkaXNhYmxlZCIsIk1vZGVsSWRzQWxsb3dJbmZlcmVuY2UiOiIzMzAxLDM1MzMiLCJNb2RlbEluZmVyZW5jZVBhcmFtZXRlcnMiOiJ7IFwibWF4X3Rva2Vuc1wiOiAxMjgsIFwidGVtcGVyYXR1cmVcIjogMC40LCBcInRvcF9rXCI6IDUgfSIsIkNvbXBldGl0aW9uTWV0cmljVGltZW91dE1pbnV0ZXMiOiIzMCJ9LCJwaWQiOiJrYWdnbGUtMTYxNjA3Iiwic3ZjIjoid2ViLWZlIiwic2RhayI6IkFJemFTeUE0ZU5xVWRSUnNrSnNDWldWei1xTDY1NVhhNUpFTXJlRSIsImJsZCI6IjdiNGJlMjc2OWJjYzI2OTNjNmE0ZGNhZTMxOWNlY2RhNjc3ZGMxOWIifQ.';
+  const method = 'POST';
+  const body = JSON.stringify({
+    includeGroups: false,
+    includeLogins: false,
+    includeVerificationStatus: false,
+  });
 
-  const webUrl = 'https://' + domain + path;
+  const webUrl = 'https://www.' + domain + path;
 
   //=====================================================
   // const notaryUrl = 'https://notary.pse.dev/v0.1.0-alpha.5';
@@ -69,8 +73,10 @@ function App(): ReactElement {
         Cookie: cookieStr,
         'Content-Type': 'application/json',
         //'Content-Length': body.length.toString(),
+        'x-xsrf-token':
+          'CfDJ8CHCUm6ypKVLpjizcZHPE712YgsbiQ4imqcQViJXIygKh986FeB0dk7_ep4OmeLvn5rm40mSzMXEvnKA0PQ1x9HmEda5e-r8hp0QD76QfFCIJrotbOslQSZNBLwBlxhF9_WZgSrWPFxywc7CVl9V0R4',
       },
-      // body,
+      body,
       secretHeaders: [],
       secretResps: [],
     });
