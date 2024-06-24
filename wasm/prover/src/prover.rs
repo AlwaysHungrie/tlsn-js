@@ -20,7 +20,7 @@ use hyper::{body::Bytes, Request, StatusCode};
 
 use js_sys::Array;
 use strum::EnumMessage;
-use tlsn_core::proof::TlsProof;
+use tlsn_core::proof::{SessionProof, SubstringsProof, TlsProof};
 use url::Url;
 use wasm_bindgen::prelude::*;
 use web_sys::{Headers, RequestInit, RequestMode};
@@ -424,9 +424,17 @@ pub async fn prover(
 
     info!("substrings_proof {:?}", substrings_proof);
 
-    let proof = TlsProof {
+    #[derive(serde::Serialize, Debug)]
+    struct Proof {
+        session: SessionProof,
+        substrings: SubstringsProof,
+        message: String,
+    }
+
+    let proof = Proof {
         session: session_proof,
         substrings: substrings_proof,
+        message: message.to_string(),
     };
 
     let res = serde_json::to_string_pretty(&proof)
