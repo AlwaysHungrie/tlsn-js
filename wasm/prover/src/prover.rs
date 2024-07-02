@@ -333,6 +333,9 @@ pub async fn prover(
         secret_headers_slices.as_slice(),
     );
 
+    info!("sent_public_ranges: {:?}", sent_public_ranges);
+    info!("sent_private_ranges: {:?}", sent_private_ranges);
+
     let secret_body_vecs = string_list_to_bytes_vec(&secret_body)?;
     let secret_body_slices: Vec<&[u8]> =
         secret_body_vecs.iter().map(|vec| vec.as_slice()).collect();
@@ -342,6 +345,15 @@ pub async fn prover(
         prover.recv_transcript().data(),
         secret_body_slices.as_slice(),
     );
+
+    let (sent_public_ranges, recv_public_ranges) = find_ranges_2(
+        prover.sent_transcript().data(),
+        prover.recv_transcript().data(),
+    );
+    //let recv_private_ranges = vec![];
+
+    info!("recv_public_ranges: {:?}", recv_public_ranges);
+    // info!("recv_private_ranges: {:?}", recv_private_ranges);
 
     log_phase(ProverPhases::Commit);
 
@@ -378,14 +390,14 @@ pub async fn prover(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    recv_private_ranges.iter().try_for_each(|range| {
-        builder
-            .commit_recv(range)
-            .map_err(|e| {
-                JsValue::from_str(&format!("Error committing recv private range: {:?}", e))
-            })
-            .map(|_| ())
-    })?;
+    // recv_private_ranges.iter().try_for_each(|range| {
+    //     builder
+    //         .commit_recv(range)
+    //         .map_err(|e| {
+    //             JsValue::from_str(&format!("Error committing recv private range: {:?}", e))
+    //         })
+    //         .map(|_| ())
+    // })?;
 
     // Finalize, returning the notarized session
     log_phase(ProverPhases::Finalize);
@@ -529,6 +541,41 @@ fn find_ranges(seq: &[u8], private_seq: &[&[u8]]) -> (Vec<Range<usize>>, Vec<Ran
     (public_ranges, private_ranges)
 }
 
+/// Find the start index of an array of bytes within the sequence.
+///
+/// Returns an `Option<usize>` which is `Some(index)` if the array is found, or `None` if it is not.
+fn find_start_index(seq: &[u8], pattern: &[u8], delimiter: &[u8]) -> (usize, usize) {
+    let index = seq
+        .windows(pattern.len())
+        .position(|window| window == pattern)
+        .unwrap_or_else(|| {
+            panic!("Could not find pattern in sequence");
+        });
+
+    let end = seq[index..]
+        .iter()
+        .position(|&c| c == delimiter[0])
+        .map(|pos| index + pos)
+        .unwrap_or_else(|| {
+            panic!("Could not find pattern in sequence");
+        });
+
+    return (index, end);
+}
+
+fn find_ranges_from_index(seq: &[u8], pattern: String, delimiter: String) -> Vec<Range<usize>> {
+    let pattern = pattern.as_bytes();
+    let delimiter = delimiter.as_bytes();
+    let (start_index, end_index) = find_start_index(seq, pattern, delimiter);
+    vec![start_index..end_index]
+}
+
+fn find_ranges_2(sent: &[u8], recv: &[u8]) -> (Vec<Range<usize>>, Vec<Range<usize>>) {
+    let range_host = find_ranges_from_index(sent, "host".to_string(), "\r".to_string());
+    let range_field = find_ranges_from_index(recv, "\"id\"".to_string(), ",".to_string()); //userId
+
+    (range_host, range_field)
+}
 fn string_list_to_bytes_vec(secrets: &JsValue) -> Result<Vec<Vec<u8>>, JsValue> {
     let array: Array = Array::from(secrets);
     let length = array.length();
@@ -543,4 +590,20 @@ fn string_list_to_bytes_vec(secrets: &JsValue) -> Result<Vec<Vec<u8>>, JsValue> 
         byte_slices.push(secret_bytes);
     }
     Ok(byte_slices)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_ranges_2() {
+        let sent = b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n";
+        let recv = b"{\"id\": 12345, \"name\": \"test\"}";
+
+        let (sent_ranges, recv_ranges) = find_ranges_2(sent, recv);
+
+        assert_eq!(sent_ranges, vec![0..50]);
+        assert_eq!(recv_ranges, vec![8..14]);
+    }
 }
