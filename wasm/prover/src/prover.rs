@@ -8,7 +8,9 @@ use ws_stream_wasm::*;
 
 use crate::hyper_io::FuturesIo;
 use crate::request_opt::RequestOptions;
-use crate::requests::{ClientType, NotarizationSessionRequest, NotarizationSessionResponse};
+use crate::requests::{
+    ClientType, NotarizationSessionRequest, NotarizationSessionResponse, VerificationRequest,
+};
 
 pub use wasm_bindgen_rayon::init_thread_pool;
 
@@ -431,7 +433,13 @@ pub async fn prover(
         message: String,
     }
 
-    let proof = Proof {
+    // V
+    // Verify the substrings proof with the session header
+    // substrings_proof
+    //     .verify(&session.header)
+    //     .unwrap_or(JsValue::from_str("Could not verify proof"));
+
+    let proof: Proof = Proof {
         session: session_proof,
         substrings: substrings_proof,
         message: message.to_string(),
@@ -442,6 +450,49 @@ pub async fn prover(
 
     let duration = start_time.elapsed();
     info!("!@# request took {} seconds", duration.as_secs());
+    ///////////////////////////// //////////// ////////////  test verify request
+    let mut opts = RequestInit::new();
+    opts.method("POST");
+    // opts.method("GET");
+    opts.mode(RequestMode::Cors);
+
+    // set headers
+    let headers = Headers::new()
+        .map_err(|e| JsValue::from_str(&format!("Could not create headers: {:?}", e)))?;
+    let notary_url = Url::parse(options.notary_url.as_str())
+        .map_err(|e| JsValue::from_str(&format!("Could not parse notary_url: {:?}", e)))?;
+    let notary_ssl = notary_url.scheme() == "https" || notary_url.scheme() == "wss";
+    let notary_host = notary_url.authority();
+
+    headers
+        .append("Host", notary_host)
+        .map_err(|e| JsValue::from_str(&format!("Could not append Host header: {:?}", e)))?;
+    headers
+        .append("Content-Type", "application/json")
+        .map_err(|e| {
+            JsValue::from_str(&format!("Could not append Content-Type header: {:?}", e))
+        })?;
+    opts.headers(&headers);
+
+    info!("notary_host: {}", notary_host);
+    // set body
+    let payload = serde_json::to_string(&proof)
+        .map_err(|e| JsValue::from_str(&format!("Could not serialize request: {:?}", e)))?;
+    opts.body(Some(&JsValue::from_str(&payload)));
+
+    debug!("Verify request");
+    let url = format!(
+        "{}://{}/verify",
+        if notary_ssl { "https" } else { "http" },
+        notary_host
+    );
+    debug!("Request: {}", url);
+    let rust_string = fetch_as_json_string(&url, &opts)
+        .await
+        .map_err(|e| JsValue::from_str(&format!("Could not fetch verify: {:?}", e)))?;
+
+    debug!("Response verify: {}", rust_string);
+    ///////////////////////////////////////////// end test verify request
 
     Ok(res)
 }

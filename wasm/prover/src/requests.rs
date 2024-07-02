@@ -19,6 +19,12 @@ pub struct NotarizationSessionRequest {
     pub max_recv_data: Option<usize>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerificationRequest {
+    pub session_id: String,
+}
+
 /// Types of client that the prover is using
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ClientType {
