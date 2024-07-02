@@ -1,3 +1,4 @@
+mod disclosure;
 pub(crate) mod hyper_io;
 mod request_opt;
 mod requests;
