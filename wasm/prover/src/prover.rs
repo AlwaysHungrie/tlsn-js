@@ -327,25 +327,12 @@ pub async fn prover(
         .map(|vec| vec.as_slice())
         .collect();
 
-    // Identify the ranges in the transcript that contain revealed_headers
-    // let (sent_public_ranges, sent_private_ranges) = find_ranges(
-    //     prover.sent_transcript().data(),
-    //     secret_headers_slices.as_slice(),
-    // );
-
-    // info!("sent_public_ranges: {:?}", sent_public_ranges);
-    // info!("sent_private_ranges: {:?}", sent_private_ranges);
-
     let secret_body_vecs = string_list_to_bytes_vec(&secret_body)?;
     let secret_body_slices: Vec<&[u8]> =
         secret_body_vecs.iter().map(|vec| vec.as_slice()).collect();
 
-    // Identify the ranges in the transcript that contain the only data we want to reveal later
-    // let (recv_public_ranges, recv_private_ranges) = find_ranges(
-    //     prover.recv_transcript().data(),
-    //     secret_body_slices.as_slice(),
-    // );
-
+    //caculate ranges for field that we want to hide
+    // only applies for some urls
     let (sent_public_ranges, recv_public_ranges) = find_ranges_2(
         prover.sent_transcript().data(),
         prover.recv_transcript().data(),

@@ -55,7 +55,7 @@ pub fn find_ranges_from_index(seq: &[u8], pattern: String, delimiter: String) ->
     let pattern = pattern.as_bytes();
     let delimiter = delimiter.as_bytes();
     let (start_index, end_index) = find_start_index(seq, pattern, delimiter);
-    vec![start_index..end_index]
+    vec![start_index..end_index + 1]
 }
 
 /// Find the ranges of specific patterns in the sent and received byte sequences.
@@ -89,7 +89,7 @@ pub fn find_ranges_2(sent: &[u8], recv: &[u8]) -> (Vec<Range<usize>>, Vec<Range<
     }
 
     let range_host = find_ranges_from_index(sent, "host".to_string(), "\r".to_string());
-    let range_field = find_ranges_from_index(recv, "\"userName\"".to_string(), ",".to_string()); // userId
+    let range_field = find_ranges_from_index(recv, "\"id\"".to_string(), ",".to_string()); // userId
 
     (range_host, range_field)
 }
