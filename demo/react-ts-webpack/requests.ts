@@ -4,7 +4,10 @@ const requests = {
         domain: 'dummyjson.com',
         path: '/products/1',
         cookieStr: '',
-        body: null
+        body: undefined,
+        headers: {
+            'Content-Type': 'application/json',
+        }
     },
     notion: {
         method: 'POST',
@@ -15,6 +18,9 @@ const requests = {
             spaceId: '4661a76e-c153-4d6c-a592-1ee6ca33f891',
             includeArchived: false,
         }),
+        headers: {
+            'Content-Type': 'application/json',
+        }
     },
     kaggle: {
         method: 'POST',
@@ -26,6 +32,9 @@ const requests = {
             includeLogins: false,
             includeVerificationStatus: false,
         }),
+        headers: {
+            'Content-Type': 'application/json',
+        }
     },
 };
 

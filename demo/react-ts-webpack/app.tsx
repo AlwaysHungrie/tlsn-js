@@ -21,7 +21,7 @@ function App(): ReactElement {
   } | null>(null);
   const [proof, setProof] = useState<Proof | null>(null);
 
-  const { method, domain, path, cookieStr, body } = requests.dummy;
+  const { method, domain, path, cookieStr, body, headers } = requests.dummy;
   https: const webUrl = 'https://' + domain + path;
   const { notaryUrl, websocketProxyUrl } = notaryConfig.local;
 
@@ -36,13 +36,8 @@ function App(): ReactElement {
       // maxSentData: 16384,
       notaryUrl,
       websocketProxyUrl,
-      headers: {
-        // Cookie: cookieStr,
-        'Content-Type': 'application/json',
-        //'Content-Length': body.length.toString(),
-        //   'x-xsrf-token': 'CfDJ8CHCUm6ypKVLpjizcZHPE712YgsbiQ4imqcQViJXIygKh986FeB0dk7_ep4OmeLvn5rm40mSzMXEvnKA0PQ1x9HmEda5e-r8hp0QD76QfFCIJrotbOslQSZNBLwBlxhF9_WZgSrWPFxywc7CVl9V0R4',
-      },
-      // body,
+      headers,
+      body,
       secretHeaders: [],
       secretResps: [],
     });
