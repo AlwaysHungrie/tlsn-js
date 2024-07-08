@@ -2,6 +2,7 @@ import init, {
   initThreadPool,
   prover,
   verify,
+  verify_proofs,
 } from '../wasm/prover/pkg/tlsn_extension_rs';
 
 export default class TLSN {
@@ -45,6 +46,7 @@ export default class TLSN {
       websocketProxyUrl?: string;
       secretHeaders?: string[];
       secretResps?: string[];
+      revealedResps?: string[];
     },
   ) {
     await this.waitForStart();
@@ -62,6 +64,7 @@ export default class TLSN {
       },
       options?.secretHeaders || [],
       options?.secretResps || [],
+      options?.revealedResps || [],
     );
     const resJSON = JSON.parse(resProver);
     // console.log('!@# resProver,resJSON=', { resProver, resJSON });
@@ -75,9 +78,17 @@ export default class TLSN {
     return resJSON;
   }
 
+
   async verify(proof: any, pubkey: string) {
     await this.waitForStart();
     const raw = await verify(JSON.stringify(proof), pubkey);
     return JSON.parse(raw);
+  }
+
+  // @NOTE this methods verifies two proofs and returns a notary signature if booth transcripts contain same user id
+  async verify_proofs(verifyProofOptions: any) {
+    await this.waitForStart();
+    const raw = await verify_proofs(verifyProofOptions);
+    return raw;
   }
 }

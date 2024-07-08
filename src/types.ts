@@ -96,3 +96,10 @@ export interface Range {
   start: number;
   end: number;
 }
+
+export type VerifyProofsOptions = {
+  auth_proof: string,
+  attribute_proof: string,
+  notary_url: string,
+  websocket_url: string,
+}

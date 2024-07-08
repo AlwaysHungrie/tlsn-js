@@ -1,10 +1,13 @@
 import React, { ReactElement, useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { prove, verify } from 'tlsn-js';
+import { prove, verify, verify_proofs } from 'tlsn-js';
 import { Proof } from 'tlsn-js/build/types';
 import { Watch } from 'react-loader-spinner';
 
 import { notaryConfig, requests } from './requests';
+
+import authProof from './proofs/auth_proof.json';
+import attributeProof from './proofs/attribute_proof.json';
 
 const container = document.getElementById('root');
 const root = createRoot(container!);
@@ -13,21 +16,15 @@ root.render(<App />);
 
 function App(): ReactElement {
   const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<{
-    time: number;
-    sent: string;
-    recv: string;
-    notaryUrl: string;
-  } | null>(null);
+  const [result, setResult] = useState<any>(null);
   const [proof, setProof] = useState<Proof | null>(null);
 
   const { method, domain, path, cookieStr, body, headers } = requests.dummy;
   https: const webUrl = 'https://' + domain + path;
   const { notaryUrl, websocketProxyUrl } = notaryConfig.local;
 
-  // @NOTE: need to add domain to notaryUrl if using PSE notary
-
-  const onClick = useCallback(async () => {
+  // @NOTE: need to add domain parameter to notaryUrl if using PSE notary
+  const onClickProve = useCallback(async () => {
     setProcessing(true);
     const p = await prove(webUrl, {
       method,
@@ -40,23 +37,34 @@ function App(): ReactElement {
       body,
       secretHeaders: [],
       secretResps: [],
+      revealedResps: ['"rating"', ','],
     });
     setProof(p);
+    setProcessing(false);
   }, [setProof, setProcessing]);
 
-  useEffect(() => {
-    (async () => {
-      if (proof) {
-        const r = await verify(proof);
-        setResult(r);
-        setProcessing(false);
-      }
-    })();
-  }, [proof, setResult]);
+  const onClickVerify = useCallback(async () => {
+    setProcessing(true);
+
+    const r = await verify_proofs({
+      auth_proof: JSON.stringify(authProof),
+      attribute_proof: JSON.stringify(attributeProof),
+      notary_url: notaryUrl,
+      websocket_url: websocketProxyUrl,
+    });
+
+    console.log('result', r);
+    setResult(JSON.parse(r));
+
+    setProcessing(false);
+  }, [proof, setProcessing]);
 
   return (
     <div>
-      <button onClick={!processing ? onClick : undefined} disabled={processing}>
+      <button
+        onClick={!processing ? onClickProve : undefined}
+        disabled={processing}
+      >
         Start demo
       </button>
       <div>
@@ -88,8 +96,16 @@ function App(): ReactElement {
         )}
       </div>
       <div>
+        <button
+          onClick={!processing ? onClickVerify : undefined}
+          disabled={processing}
+        >
+          Verify
+        </button>
+      </div>
+      <div>
         <b>Verification: </b>
-        {!proof ? (
+        {!result ? (
           <i>not started</i>
         ) : !result ? (
           <i>verifying</i>

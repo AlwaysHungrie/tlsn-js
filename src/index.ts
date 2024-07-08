@@ -1,5 +1,5 @@
 import TLSN from './tlsn';
-import { Proof } from './types';
+import { Proof, VerifyProofsOptions } from './types';
 
 let _tlsn: TLSN;
 
@@ -23,6 +23,7 @@ export const prove = async (
     maxTranscriptSize?: number;
     secretHeaders?: string[];
     secretResps?: string[];
+    revealedResps?: string[];
   },
 ): Promise<Proof> => {
   const {
@@ -36,6 +37,7 @@ export const prove = async (
     websocketProxyUrl,
     secretHeaders,
     secretResps,
+    revealedResps,
   } = options;
 
   const tlsn = await getTLSN();
@@ -54,6 +56,7 @@ export const prove = async (
     websocketProxyUrl,
     secretHeaders,
     secretResps,
+    revealedResps,
   });
 
   return {
@@ -87,3 +90,10 @@ async function fetchPublicKeyFromNotary(notaryUrl: string) {
   if (!json.publicKey) throw new Error('invalid response');
   return json.publicKey;
 }
+
+
+export const verify_proofs = async (verifyProofOptions: VerifyProofsOptions): Promise<string> => {
+  const tlsn = await getTLSN();
+  const result = await tlsn.verify_proofs(verifyProofOptions);
+  return result;
+};

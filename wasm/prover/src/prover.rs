@@ -29,7 +29,7 @@ use web_sys::{Headers, RequestInit, RequestMode};
 
 use tracing::{debug, info};
 
-pub use crate::disclosure::find_ranges_2;
+pub use crate::disclosure::{find_ranges, find_ranges_2};
 
 #[derive(strum_macros::EnumMessage, Debug, Clone, Copy)]
 #[allow(dead_code)]
@@ -70,6 +70,14 @@ enum ProverPhases {
     CreateProof,
 }
 
+#[derive(serde::Deserialize)]
+struct VerifyProofsOptions {
+    auth_proof: String,
+    attribute_proof: String,
+    notary_url: String,
+    websocket_url: String,
+}
+
 fn log_phase(phase: ProverPhases) {
     info!("tlsn-js {}: {}", phase as u8, phase.get_message().unwrap());
 }
@@ -80,6 +88,7 @@ pub async fn prover(
     val: JsValue,
     secret_headers: JsValue,
     secret_body: JsValue,
+    revealed_body: JsValue,
 ) -> Result<String, JsValue> {
     info!("target_url: {}", target_url_str);
     let target_url = Url::parse(target_url_str)
@@ -331,13 +340,33 @@ pub async fn prover(
     let secret_body_slices: Vec<&[u8]> =
         secret_body_vecs.iter().map(|vec| vec.as_slice()).collect();
 
-    //caculate ranges for field that we want to hide
-    // only applies for some urls
+    // Identify the ranges in the transcript that contain revealed_headers
+    let (sent_public_ranges, sent_private_ranges) = find_ranges(
+        prover.sent_transcript().data(),
+        secret_headers_slices.as_slice(),
+    );
+
+    // Identify the ranges in the transcript that contain the only data we want to reveal later
+    let (recv_public_ranges, recv_private_ranges) = find_ranges(
+        prover.recv_transcript().data(),
+        secret_body_slices.as_slice(),
+    );
+
+    // Convert revealed_body to bytes
+    let revealed_body_vecs = string_list_to_bytes_vec(&revealed_body)?;
+    let revealed_body_slices: Vec<&[u8]> = revealed_body_vecs
+        .iter()
+        .map(|vec| vec.as_slice())
+        .collect();
+
     let (sent_public_ranges, recv_public_ranges) = find_ranges_2(
         prover.sent_transcript().data(),
         prover.recv_transcript().data(),
+        revealed_body_slices.as_slice(),
     );
     //let recv_private_ranges = vec![];
+
+    // Convert revealed_body to bytes
 
     info!("recv_public_ranges: {:?}", recv_public_ranges);
     // info!("recv_private_ranges: {:?}", recv_private_ranges);
@@ -449,7 +478,37 @@ pub async fn prover(
 
     let duration = start_time.elapsed();
     info!("!@# request took {} seconds", duration.as_secs());
-    ///////////////////////////// //////////// ////////////  test verify request
+
+    Ok(res)
+}
+
+#[wasm_bindgen]
+pub async fn verify_proofs(verifyProofsOptions: JsValue) -> Result<String, JsValue> {
+    // Destructure parameters from verifyProofsOptions
+    let VerifyProofsOptions {
+        auth_proof,
+        attribute_proof,
+        notary_url,
+        websocket_url,
+    } = serde_wasm_bindgen::from_value(verifyProofsOptions)
+        .map_err(|e| JsValue::from_str(&format!("Failed to deserialize options: {:?}", e)))?;
+
+    // convert proof
+
+    #[derive(serde::Serialize, Debug)]
+    struct Proof {
+        session: SessionProof,
+        substrings: SubstringsProof,
+        message: String,
+    }
+
+    // Deserialize the string into TlsProof
+    let auth_proof: TlsProof = serde_json::from_str(&auth_proof)
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse auth_proof: {:?}", e)))?;
+
+    let attribute_proof: TlsProof = serde_json::from_str(&attribute_proof)
+        .map_err(|e| JsValue::from_str(&format!("Failed to parse attribute_proof: {:?}", e)))?;
+
     let mut opts = RequestInit::new();
     opts.method("POST");
     // opts.method("GET");
@@ -458,7 +517,7 @@ pub async fn prover(
     // set headers
     let headers = Headers::new()
         .map_err(|e| JsValue::from_str(&format!("Could not create headers: {:?}", e)))?;
-    let notary_url = Url::parse(options.notary_url.as_str())
+    let notary_url = Url::parse(&notary_url)
         .map_err(|e| JsValue::from_str(&format!("Could not parse notary_url: {:?}", e)))?;
     let notary_ssl = notary_url.scheme() == "https" || notary_url.scheme() == "wss";
     let notary_host = notary_url.authority();
@@ -473,19 +532,23 @@ pub async fn prover(
         })?;
     opts.headers(&headers);
 
-    info!("notary_host: {}", notary_host);
-    // set body
-    let payload = serde_json::to_string(&proof)
-        .map_err(|e| JsValue::from_str(&format!("Could not serialize request: {:?}", e)))?;
+    let payload = serde_json::json!({
+        "auth_proof": auth_proof,
+        "attribute_proof": attribute_proof,
+    })
+    .to_string();
+
+    debug!("payload: {}", payload);
+
+    //write file
     opts.body(Some(&JsValue::from_str(&payload)));
 
-    debug!("Verify request");
     let url = format!(
         "{}://{}/verify",
         if notary_ssl { "https" } else { "http" },
         notary_host
     );
-    debug!("Request: {}", url);
+    // debug!("Request: {}", url);
     let rust_string = fetch_as_json_string(&url, &opts)
         .await
         .map_err(|e| JsValue::from_str(&format!("Could not fetch verify: {:?}", e)))?;
@@ -493,9 +556,8 @@ pub async fn prover(
     debug!("Response verify: {}", rust_string);
     ///////////////////////////////////////////// end test verify request
 
-    Ok(res)
+    Ok(rust_string)
 }
-
 fn string_list_to_bytes_vec(secrets: &JsValue) -> Result<Vec<Vec<u8>>, JsValue> {
     let array: Array = Array::from(secrets);
     let length = array.length();
