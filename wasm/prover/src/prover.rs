@@ -425,12 +425,6 @@ pub async fn prover(
 
     log_phase(ProverPhases::NotarizationComplete);
 
-    let notary_signature = notarized_session.signature2();
-    info!("Notary signature 0x{:?}", notary_signature);
-
-    let message = notarized_session.message();
-    info!("Notary message {}", message);
-
     // Create a proof for all committed data in this session
     log_phase(ProverPhases::CreateProof);
     let session_proof = notarized_session.session_proof();
@@ -458,7 +452,6 @@ pub async fn prover(
     struct Proof {
         session: SessionProof,
         substrings: SubstringsProof,
-        message: String,
     }
 
     // V
@@ -470,7 +463,6 @@ pub async fn prover(
     let proof: Proof = Proof {
         session: session_proof,
         substrings: substrings_proof,
-        message: message.to_string(),
     };
 
     let res = serde_json::to_string_pretty(&proof)
