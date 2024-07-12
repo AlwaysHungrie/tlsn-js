@@ -360,6 +360,8 @@ pub async fn prover(
         .map(|vec| vec.as_slice())
         .collect();
 
+    info!("revealed_body: {:?}", revealed_body);
+
     let (sent_public_ranges, recv_public_ranges) = find_ranges_2(
         prover.sent_transcript().data(),
         prover.recv_transcript().data(),
@@ -450,7 +452,7 @@ pub async fn prover(
         .map_err(|e| JsValue::from_str(&format!("Could not serialize proof: {:?}", e)))?;
 
     let duration = start_time.elapsed();
-    info!("!@# request took {} seconds", duration.as_secs());
+    info!("!@# the request took {} seconds", duration.as_secs());
 
     Ok(res)
 }
