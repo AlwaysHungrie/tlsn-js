@@ -336,15 +336,15 @@ pub async fn prover(
         .map(|vec| vec.as_slice())
         .collect();
 
-    let secret_body_vecs = string_list_to_bytes_vec(&secret_body)?;
-    let secret_body_slices: Vec<&[u8]> =
-        secret_body_vecs.iter().map(|vec| vec.as_slice()).collect();
-
     // Identify the ranges in the transcript that contain revealed_headers
     let (sent_public_ranges, sent_private_ranges) = find_ranges(
         prover.sent_transcript().data(),
         secret_headers_slices.as_slice(),
     );
+
+    let secret_body_vecs = string_list_to_bytes_vec(&secret_body)?;
+    let secret_body_slices: Vec<&[u8]> =
+        secret_body_vecs.iter().map(|vec| vec.as_slice()).collect();
 
     // Identify the ranges in the transcript that contain the only data we want to reveal later
     let (recv_public_ranges, recv_private_ranges) = find_ranges(
@@ -352,7 +352,8 @@ pub async fn prover(
         secret_body_slices.as_slice(),
     );
 
-    // Convert revealed_body to bytes
+    //NOTE new type of calculation for ranges
+    //, use revealed_body parameter which is more convenient
     let revealed_body_vecs = string_list_to_bytes_vec(&revealed_body)?;
     let revealed_body_slices: Vec<&[u8]> = revealed_body_vecs
         .iter()
@@ -364,12 +365,6 @@ pub async fn prover(
         prover.recv_transcript().data(),
         revealed_body_slices.as_slice(),
     );
-    //let recv_private_ranges = vec![];
-
-    // Convert revealed_body to bytes
-
-    info!("recv_public_ranges: {:?}", recv_public_ranges);
-    // info!("recv_private_ranges: {:?}", recv_private_ranges);
 
     log_phase(ProverPhases::Commit);
 
@@ -377,8 +372,9 @@ pub async fn prover(
 
     let builder = prover.commitment_builder();
 
+    //new type of calculation for ranges
+
     // Commit to the outbound and inbound transcript, isolating the data that contain secrets
-    //commitments
     let sent_pub_commitment_ids = sent_public_ranges
         .iter()
         .map(|range| {
@@ -388,14 +384,14 @@ pub async fn prover(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    // sent_private_ranges.iter().try_for_each(|range| {
-    //     builder
-    //         .commit_sent(range)
-    //         .map_err(|e| {
-    //             JsValue::from_str(&format!("Error committing sent private range: {:?}", e))
-    //         })
-    //         .map(|_| ())
-    // })?;
+    sent_private_ranges.iter().try_for_each(|range| {
+        builder
+            .commit_sent(range)
+            .map_err(|e| {
+                JsValue::from_str(&format!("Error committing sent private range: {:?}", e))
+            })
+            .map(|_| ())
+    })?;
 
     let recv_pub_commitment_ids = recv_public_ranges
         .iter()
@@ -406,18 +402,17 @@ pub async fn prover(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    // recv_private_ranges.iter().try_for_each(|range| {
-    //     builder
-    //         .commit_recv(range)
-    //         .map_err(|e| {
-    //             JsValue::from_str(&format!("Error committing recv private range: {:?}", e))
-    //         })
-    //         .map(|_| ())
-    // })?;
+    recv_private_ranges.iter().try_for_each(|range| {
+        builder
+            .commit_recv(range)
+            .map_err(|e| {
+                JsValue::from_str(&format!("Error committing recv private range: {:?}", e))
+            })
+            .map(|_| ())
+    })?;
 
     // Finalize, returning the notarized session
     log_phase(ProverPhases::Finalize);
-
     let notarized_session = prover
         .finalize()
         .await
@@ -446,21 +441,7 @@ pub async fn prover(
         .build()
         .map_err(|e| JsValue::from_str(&format!("Could not build proof: {:?}", e)))?;
 
-    info!("substrings_proof {:?}", substrings_proof);
-
-    #[derive(serde::Serialize, Debug)]
-    struct Proof {
-        session: SessionProof,
-        substrings: SubstringsProof,
-    }
-
-    // V
-    // Verify the substrings proof with the session header
-    // substrings_proof
-    //     .verify(&session.header)
-    //     .unwrap_or(JsValue::from_str("Could not verify proof"));
-
-    let proof: Proof = Proof {
+    let proof = TlsProof {
         session: session_proof,
         substrings: substrings_proof,
     };
