@@ -265,6 +265,7 @@ pub async fn prover(
         .map_err(|e| JsValue::from_str(&format!("Could not build request: {:?}", e)))?;
 
     log_phase(ProverPhases::StartMpcConnection);
+    info!("Sending request: {:?}", unwrapped_request);
 
     // Defer decryption of the response.
     prover_ctrl
@@ -272,11 +273,16 @@ pub async fn prover(
         .await
         .map_err(|e| JsValue::from_str(&format!("failed to enable deferred decryption: {}", e)))?;
 
+    info!("Request: {:?}", unwrapped_request);
+
     // Send the request to the Server and get a response via the MPC TLS connection
     let response = request_sender
         .send_request(unwrapped_request)
         .await
         .map_err(|e| JsValue::from_str(&format!("Could not send request: {:?}", e)))?;
+
+
+    info!("Response: {:?}", response);
 
     log_phase(ProverPhases::ReceivedResponse);
     if response.status() != StatusCode::OK {
@@ -288,6 +294,8 @@ pub async fn prover(
         )));
     }
 
+    info!("Response status: {:?}", response.status());
+
     log_phase(ProverPhases::ParseResponse);
     // Pretty printing :)
     let payload = response
@@ -296,11 +304,37 @@ pub async fn prover(
         .await
         .map_err(|e| JsValue::from_str(&format!("Could not get response body: {:?}", e)))?
         .to_bytes();
-    let parsed = serde_json::from_str::<serde_json::Value>(&String::from_utf8_lossy(&payload))
-        .map_err(|e| JsValue::from_str(&format!("Could not parse response: {:?}", e)))?;
-    let response_pretty = serde_json::to_string_pretty(&parsed)
-        .map_err(|e| JsValue::from_str(&format!("Could not serialize response: {:?}", e)))?;
-    info!("Response: {}", response_pretty);
+
+    info!("Response payload: {:?}", payload);
+
+    fn hexdump(bytes: &[u8]) -> String {
+        bytes.chunks(16).enumerate().map(|(i, chunk)| {
+            let hex = chunk.iter()
+                .map(|b| format!("{:02x}", b))
+                .collect::<Vec<_>>()
+                .join(" ");
+            let ascii = chunk.iter()
+                .map(|&b| if b.is_ascii() && !b.is_ascii_control() {
+                    b as char
+                } else {
+                    '.'
+                })
+                .collect::<String>();
+            format!("{:08x}: {:48} |{}|", i * 16, hex, ascii)
+        }).collect::<Vec<_>>().join("\n")
+    }
+    
+    let hex_string = hexdump(&payload);
+    info!("Response utf payload: {:?}", hex_string);
+
+    // let parsed = serde_json::from_str::<serde_json::Value>(&String::from_utf8_lossy(&payload))
+    //     .map_err(|e| JsValue::from_str(&format!("Could not parse response: {:?}", e)))?;
+
+    // info!("Response parsed: {:?}", parsed);
+
+    // let response_pretty = serde_json::to_string_pretty(&parsed)
+    //     .map_err(|e| JsValue::from_str(&format!("Could not serialize response: {:?}", e)))?;
+    // info!("Response: {}", response_pretty);
 
     // Close the connection to the server
     log_phase(ProverPhases::CloseConnection);
@@ -360,7 +394,7 @@ pub async fn prover(
         .map(|vec| vec.as_slice())
         .collect();
 
-    info!("revealed_body: {:?}", revealed_body);
+    info!("revealed_body_slices: {:?}", revealed_body_slices);
 
     let (sent_public_ranges, recv_public_ranges) = find_ranges_2(
         prover.sent_transcript().data(),

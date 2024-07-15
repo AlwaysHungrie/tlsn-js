@@ -1,4 +1,5 @@
 use std::ops::Range;
+use tracing::{debug, info};
 
 /// Find the ranges of the public and private parts of a sequence.
 ///
@@ -93,9 +94,28 @@ pub fn find_ranges_2(
 ) -> (Vec<Range<usize>>, Vec<Range<usize>>) {
     //@DEBUG: should have a reveal_header params
     //let range_host = find_ranges_from_index(sent, "host".to_string(), "\r".to_string());
-    let range_field = find_ranges_from_pattern(recv, revealed_body[0], revealed_body[1]); // userId
+    info!("params: {:?} {:?}", sent, recv);
+    info!("revealed_body: {:?}", revealed_body);
+    // let range_field = find_ranges_from_pattern(recv, revealed_body[0], revealed_body[1]); // userId
 
-    (vec![], range_field)
+    // info!("range_field: {:?}", range_field);
+    // (vec![], range_field)
+
+    let mut range_fields = Vec::new();
+    
+    // Process revealed_body in pairs
+    for chunk in revealed_body.chunks(2) {
+        if chunk.len() == 2 {
+            let range = find_ranges_from_pattern(recv, chunk[0], chunk[1]);
+            range_fields.extend(range);
+        } else {
+            // Handle the case where there's an odd number of elements
+            info!("Odd number of elements in revealed_body. Skipping last element.");
+        }
+    }
+    
+    info!("range_fields: {:?}", range_fields);
+    (vec![], range_fields)
 }
 
 #[cfg(test)]
